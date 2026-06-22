@@ -76,3 +76,30 @@ stages:
               echo "All connectivity tests passed successfully!"
               echo "Pipeline completed at: $(System.TeamFoundationCollectionUri)"
             displayName: 'Verify Deployment Readiness'
+
+          # ✅ ADD THIS TASK - CREATE WORK ITEM ON SUCCESS
+          - task: CreateWorkItem@1
+            displayName: 'Create Work Item - Release Task'
+            inputs:
+              workItemType: 'Task'
+              title: 'Release $(Build.BuildNumber) - Deployment in Progress'
+              description: |
+                Build ID: $(Build.BuildId)
+                Commit: $(Build.SourceVersion)
+                Branch: $(Build.SourceBranch)
+                Triggered by: $(Build.QueuedBy)
+                
+                This task tracks the deployment progress:
+                - ✓ Build Completed
+                - ⏳ Awaiting DEV Deployment Approval
+                - ⏳ Awaiting ACC Deployment Approval
+                - ⏳ Awaiting PROD Deployment Approval
+                
+                Check Release Pipeline for detailed progress.
+              assignedTo: '$(Build.QueuedBy)'
+              areaPath: '$(System.TeamProject)\Test Team'
+              iterationPath: '$(System.TeamProject)\Test Team'
+              linkWorkItems: false
+              linkType: 'Build'
+              linkTarget: '$(Build.BuildId)'
+            condition: succeeded()
