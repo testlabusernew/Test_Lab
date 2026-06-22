@@ -99,7 +99,8 @@ stages:
                 # Base64 encode token for authentication
                 $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$token"))
                 
-                # Create JSON payload for work item (WITHOUT AreaPath to use default)
+                # Create JSON payload for work item
+                # Using "Active" instead of "In Progress" - valid Task states: To Do, Active, Done, Removed
                 $workItemPayload = @(
                   @{
                     op    = "add"
@@ -114,7 +115,7 @@ stages:
                   @{
                     op    = "add"
                     path  = "/fields/System.State"
-                    value = "In Progress"
+                    value = "Active"
                   }
                 )
                 
