@@ -99,7 +99,7 @@ stages:
                 # Base64 encode token for authentication
                 $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$token"))
                 
-                # Create JSON payload for work item
+                # Create JSON payload for work item (WITHOUT AreaPath to use default)
                 $workItemPayload = @(
                   @{
                     op    = "add"
@@ -115,11 +115,6 @@ stages:
                     op    = "add"
                     path  = "/fields/System.State"
                     value = "In Progress"
-                  }
-                  @{
-                    op    = "add"
-                    path  = "/fields/System.AreaPath"
-                    value = "Test\Test Team"
                   }
                 )
                 
