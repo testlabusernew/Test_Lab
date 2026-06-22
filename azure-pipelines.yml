@@ -77,7 +77,7 @@ stages:
               echo "Pipeline completed at: $(System.TeamFoundationCollectionUri)"
             displayName: 'Verify Deployment Readiness'
 
-          # ✅ CREATE WORK ITEM VIA REST API (No extension needed)
+          # ✅ CREATE WORK ITEM VIA REST API
           - task: PowerShell@2
             displayName: 'Create Work Item - Release Task'
             inputs:
@@ -100,7 +100,7 @@ stages:
                 $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$token"))
                 
                 # Create JSON payload for work item
-                # Using "Active" instead of "In Progress" - valid Task states: To Do, Active, Done, Removed
+                # Using "Doing" which is the correct state for Task items (To Do, Doing, Done)
                 $workItemPayload = @(
                   @{
                     op    = "add"
@@ -115,7 +115,7 @@ stages:
                   @{
                     op    = "add"
                     path  = "/fields/System.State"
-                    value = "Active"
+                    value = "Doing"
                   }
                 )
                 
