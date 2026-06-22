@@ -77,9 +77,9 @@ stages:
               echo "Pipeline completed at: $(System.TeamFoundationCollectionUri)"
             displayName: 'Verify Deployment Readiness'
 
-          # ✅ CREATE WORK ITEM VIA REST API
+          # ✅ CREATE ISSUE WORK ITEM VIA REST API
           - task: PowerShell@2
-            displayName: 'Create Work Item - Release Task'
+            displayName: 'Create Issue - Release Tracking'
             inputs:
               targetType: 'inline'
               script: |
@@ -99,8 +99,7 @@ stages:
                 # Base64 encode token for authentication
                 $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$token"))
                 
-                # Create JSON payload for work item
-                # Using "Doing" which is the correct state for Task items (To Do, Doing, Done)
+                # Create JSON payload for Issue work item
                 $workItemPayload = @(
                   @{
                     op    = "add"
@@ -119,8 +118,8 @@ stages:
                   }
                 )
                 
-                # REST API endpoint for creating work item
-                $uri = "https://dev.azure.com/773612/Test/_apis/wit/workitems/`$Task?api-version=7.0"
+                # REST API endpoint for creating Issue work item
+                $uri = "https://dev.azure.com/773612/Test/_apis/wit/workitems/`$Issue?api-version=7.0"
                 
                 try {
                   # Make REST API call to create work item
@@ -131,16 +130,21 @@ stages:
                     -Headers @{ Authorization = "Basic $auth" } `
                     -Body ($workItemPayload | ConvertTo-Json -AsArray)
                   
-                  Write-Host "✓ Work Item Created Successfully!"
-                  Write-Host "Work Item ID: $($response.id)"
-                  Write-Host "Work Item URL: $($response.url)"
+                  Write-Host "=========================================="
+                  Write-Host "✓ Issue Created Successfully!"
+                  Write-Host "=========================================="
+                  Write-Host "Issue ID: $($response.id)"
+                  Write-Host "Issue Title: $($response.fields.'System.Title')"
+                  Write-Host "Issue State: $($response.fields.'System.State')"
+                  Write-Host "Issue URL: $($response.url)"
+                  Write-Host "=========================================="
                   
                   # Save work item ID as pipeline variable for later use in Release pipeline
                   Write-Output "##vso[task.setvariable variable=WorkItemId]$($response.id)"
                   Write-Output "##vso[task.setvariable variable=WorkItemId;isOutput=true]$($response.id)"
                 }
                 catch {
-                  Write-Error "Failed to create work item: $_"
+                  Write-Error "Failed to create issue: $_"
                   exit 1
                 }
             env:
