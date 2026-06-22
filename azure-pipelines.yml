@@ -58,9 +58,9 @@ stages:
         steps:
           - script: |
               echo "Running sample tests..."
-              echo "Test 1: Filesystem access - PASSED!"
-              echo "Test 2: Environment variables - PASSED!"
-              echo "Test 3: Network connectivity - PASSED!"
+              echo "Test 1: Filesystem access - PASSED"
+              echo "Test 2: Environment variables - PASSED"
+              echo "Test 3: Network connectivity - PASSED"
             displayName: 'Execute Tests'
 
   - stage: Deploy
@@ -77,29 +77,76 @@ stages:
               echo "Pipeline completed at: $(System.TeamFoundationCollectionUri)"
             displayName: 'Verify Deployment Readiness'
 
-          # ✅ ADD THIS TASK - CREATE WORK ITEM ON SUCCESS
-          - task: CreateWorkItem@1
+          # ✅ CREATE WORK ITEM VIA REST API (No extension needed)
+          - task: PowerShell@2
             displayName: 'Create Work Item - Release Task'
             inputs:
-              workItemType: 'Task'
-              title: 'Release $(Build.BuildNumber) - Deployment in Progress'
-              description: |
-                Build ID: $(Build.BuildId)
-                Commit: $(Build.SourceVersion)
-                Branch: $(Build.SourceBranch)
-                Triggered by: $(Build.QueuedBy)
+              targetType: 'inline'
+              script: |
+                # Get current date/time
+                $currentDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
                 
-                This task tracks the deployment progress:
-                - ✓ Build Completed
-                - ⏳ Awaiting DEV Deployment Approval
-                - ⏳ Awaiting ACC Deployment Approval
-                - ⏳ Awaiting PROD Deployment Approval
+                # Azure DevOps variables
+                $organization = "dev.azure.com/773612"
+                $project = "Test"
+                $token = "$(System.AccessToken)"
+                $buildId = "$(Build.BuildId)"
+                $buildNumber = "$(Build.BuildNumber)"
+                $queuedBy = "$(Build.QueuedBy)"
+                $sourceVersion = "$(Build.SourceVersion)"
+                $sourceBranch = "$(Build.SourceBranch)"
                 
-                Check Release Pipeline for detailed progress.
-              assignedTo: '$(Build.QueuedBy)'
-              areaPath: '$(System.TeamProject)\Test Team'
-              iterationPath: '$(System.TeamProject)\Test Team'
-              linkWorkItems: false
-              linkType: 'Build'
-              linkTarget: '$(Build.BuildId)'
+                # Base64 encode token for authentication
+                $auth = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$token"))
+                
+                # Create JSON payload for work item
+                $workItemPayload = @(
+                  @{
+                    op    = "add"
+                    path  = "/fields/System.Title"
+                    value = "Release $(Build.BuildNumber) - Deployment in Progress"
+                  }
+                  @{
+                    op    = "add"
+                    path  = "/fields/System.Description"
+                    value = "Build ID: $buildId`nCommit: $sourceVersion`nBranch: $sourceBranch`nTriggered by: $queuedBy`nCreated: $currentDate`n`nDeployment Status:`n✓ Build Completed`n⏳ Awaiting DEV Deployment Approval`n⏳ Awaiting ACC Deployment Approval`n⏳ Awaiting PROD Deployment Approval"
+                  }
+                  @{
+                    op    = "add"
+                    path  = "/fields/System.State"
+                    value = "In Progress"
+                  }
+                  @{
+                    op    = "add"
+                    path  = "/fields/System.AreaPath"
+                    value = "Test\Test Team"
+                  }
+                )
+                
+                # REST API endpoint for creating work item
+                $uri = "https://dev.azure.com/773612/Test/_apis/wit/workitems/`$Task?api-version=7.0"
+                
+                try {
+                  # Make REST API call to create work item
+                  $response = Invoke-RestMethod `
+                    -Uri $uri `
+                    -Method POST `
+                    -ContentType "application/json-patch+json" `
+                    -Headers @{ Authorization = "Basic $auth" } `
+                    -Body ($workItemPayload | ConvertTo-Json -AsArray)
+                  
+                  Write-Host "✓ Work Item Created Successfully!"
+                  Write-Host "Work Item ID: $($response.id)"
+                  Write-Host "Work Item URL: $($response.url)"
+                  
+                  # Save work item ID as pipeline variable for later use in Release pipeline
+                  Write-Output "##vso[task.setvariable variable=WorkItemId]$($response.id)"
+                  Write-Output "##vso[task.setvariable variable=WorkItemId;isOutput=true]$($response.id)"
+                }
+                catch {
+                  Write-Error "Failed to create work item: $_"
+                  exit 1
+                }
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
             condition: succeeded()
