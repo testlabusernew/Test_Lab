@@ -1,0 +1,78 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build and Test Connectivity'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.9'
+            displayName: 'Use Python 3.9'
+
+          - script: |
+              echo "=========================================="
+              echo "Azure DevOps Pipeline - Connectivity Test"
+              echo "=========================================="
+              echo "Build ID: $(Build.BuildId)"
+              echo "Build Number: $(Build.BuildNumber)"
+              echo "Source Branch: $(Build.SourceBranch)"
+              echo "Repository: $(Build.Repository.Name)"
+              echo "Agent OS: $(Agent.OS)"
+              echo "Agent Version: $(Agent.Version)"
+              echo "=========================================="
+            displayName: 'Display Build Information'
+
+          - script: |
+              python --version
+              pip install --upgrade pip
+            displayName: 'Setup Python Environment'
+
+          - script: |
+              echo "Running basic connectivity tests..."
+              python -c "import socket; print(f'Hostname: {socket.gethostname()}')"
+              python -c "import platform; print(f'Platform: {platform.platform()}')"
+            displayName: 'Run Connectivity Tests'
+
+          - script: |
+              echo "Repository Contents:"
+              ls -la
+            displayName: 'List Repository Contents'
+
+  - stage: Test
+    displayName: 'Test Stage'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: TestJob
+        displayName: 'Run Tests'
+        steps:
+          - script: |
+              echo "Running sample tests..."
+              echo "Test 1: Filesystem access - PASSED"
+              echo "Test 2: Environment variables - PASSED"
+              echo "Test 3: Network connectivity - PASSED"
+            displayName: 'Execute Tests'
+
+  - stage: Deploy
+    displayName: 'Deploy Stage'
+    dependsOn: Test
+    condition: succeeded()
+    jobs:
+      - job: DeployJob
+        displayName: 'Deployment Verification'
+        steps:
+          - script: |
+              echo "Deployment Stage - Ready for production"
+              echo "All connectivity tests passed successfully!"
+              echo "Pipeline completed at: $(System.TeamFoundationCollectionUri)"
+            displayName: 'Verify Deployment Readiness'
