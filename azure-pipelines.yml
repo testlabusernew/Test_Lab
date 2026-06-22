@@ -58,9 +58,9 @@ stages:
         steps:
           - script: |
               echo "Running sample tests..."
-              echo "Test 1: Filesystem access - PASSED"
-              echo "Test 2: Environment variables - PASSED"
-              echo "Test 3: Network connectivity - PASSED"
+              echo "Test 1: Filesystem access - PASSED!"
+              echo "Test 2: Environment variables - PASSED!"
+              echo "Test 3: Network connectivity - PASSED!"
             displayName: 'Execute Tests'
 
   - stage: Deploy
